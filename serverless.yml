@@ -1,0 +1,52 @@
+
+
+service: speed-tester-etl
+app: network-speed-tester
+#org: your-org-name
+
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  role: arn:aws:iam::092094750434:role/lambdaFullAccess
+
+functions:
+  collect:
+    handler: handler.collect
+    events:
+      - s3:
+          bucket: network-speed-test-temp
+          event: s3:ObjectCreated:*
+      - cloudwatchEvent:
+          event:
+            source:
+              - "aws.s3"
+            detail-type:
+              - "S3 Object Uploaded Event"
+            detail:
+              state:
+                - pending
+  get:
+    handler: apis/get.get
+    events:
+      - http:
+          path: apis/getall
+          method: get
+          cors: true
+
+# you can add CloudFormation resource templates here
+resources: # CloudFormation template syntax from here on.
+  Resources:
+    usersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: speedTable
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
